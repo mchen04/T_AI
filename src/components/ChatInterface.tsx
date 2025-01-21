@@ -1,4 +1,9 @@
 import { useState, useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import 'katex/dist/katex.min.css';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Pin, Search, Plus, Edit, Trash } from "lucide-react";
@@ -388,7 +393,26 @@ const ChatInterface = () => {
                     isStreaming && "relative overflow-hidden"
                   )}
                 >
-                  {msg.text}
+                  <div className="whitespace-pre-wrap">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm, remarkMath]}
+                      rehypePlugins={[rehypeKatex]}
+                      className="prose prose-sm max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0 prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-gray-100 prose-pre:p-2 prose-pre:rounded prose-pre:text-sm prose-blockquote:border-l-4 prose-blockquote:border-gray-300 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-600 prose-table:border-collapse prose-table:border prose-table:border-gray-300 prose-th:bg-gray-100 prose-th:p-2 prose-td:p-2 prose-td:border prose-td:border-gray-300"
+                      components={{
+                        text: ({node, children, ...props}) => {
+                          // Convert simple fractions like 9/3 to LaTeX
+                          const text = Array.isArray(children) ? children.join('') : children?.toString() || ''
+                          const fractionPattern = /(\d+)\/(\d+)/g
+                          const processedText = text.replace(fractionPattern, (match, numerator, denominator) => {
+                            return `$$\\frac{${numerator}}{${denominator}}$$`
+                          })
+                          return <>{processedText}</>
+                        }
+                      }}
+                    >
+                      {msg.text}
+                    </ReactMarkdown>
+                  </div>
                   {isStreaming && (
                     <div className="absolute inset-x-0 bottom-0 h-1 bg-white/20">
                       <div className="h-full w-1/2 bg-white/50 animate-streaming" />
