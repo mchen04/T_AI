@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Pin, Search, Plus, Edit, Trash } from "lucide-react";
+import { EditTitleModal, DeleteConfirmationModal } from "./ChatModals";
 import { toast } from 'sonner';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -12,10 +13,10 @@ import { ChatApiService } from "@/services/ChatApiService";
 import { Chat, Message } from "@/types";
 
 const chatStorageService = new ChatStorageService();
-const chatApiService = new ChatApiService(
-  import.meta.env.VITE_DEEPSEEK_API_URL || "https://api.deepseek.com/v1/chat/completions",
-  import.meta.env.VITE_DEEPSEEK_API_KEY
-);
+const chatApiService = new ChatApiService({
+  apiUrl: import.meta.env.VITE_DEEPSEEK_API_URL || "https://api.deepseek.com/v1/chat/completions",
+  apiKey: import.meta.env.VITE_DEEPSEEK_API_KEY
+});
 const chatService = new ChatService(chatStorageService, chatApiService);
 
 const ChatInterface = () => {
@@ -24,6 +25,8 @@ const ChatInterface = () => {
   const [chats, setChats] = useState<Chat[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [editingChatId, setEditingChatId] = useState<string | null>(null);
+  const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
 
   // Load initial chats
   useEffect(() => {
@@ -54,16 +57,17 @@ const ChatInterface = () => {
     try {
       setIsLoading(true);
       
-      if (!currentChatId) {
-        const newChat = await chatService.createChat(message);
+      let chatId = currentChatId;
+      if (!chatId) {
+        // Create new chat with temporary title
+        const newChat = await chatService.createChat("New Chat");
         setChats([newChat, ...chats]);
-        setCurrentChatId(newChat.id);
-        setMessage("");
-        return;
+        chatId = newChat.id;
+        setCurrentChatId(chatId);
       }
 
       // Start streaming response
-      const stream = chatService.sendMessage(currentChatId, message);
+      const stream = chatService.sendMessage(chatId, message);
       let finalChat: Chat | null = null;
       
       for await (const updatedChat of stream) {
@@ -78,6 +82,16 @@ const ChatInterface = () => {
       if (finalChat) {
         // Update local storage with latest chat
         localStorage.setItem("last-chat-id", finalChat.id);
+        
+        // Update chat title with first message if this was a new chat
+        if (!currentChatId) {
+          await chatService.updateChatTitle(finalChat.id, message);
+          setChats(chats => 
+            chats.map(chat => 
+              chat.id === finalChat.id ? {...chat, title: message} : chat
+            )
+          );
+        }
       }
       setMessage("");
     } catch (error) {
@@ -114,42 +128,75 @@ const ChatInterface = () => {
   };
 
   const handleEditTitle = async (chatId: string, currentTitle: string) => {
-    const newTitle = prompt("Edit chat title", currentTitle);
-    if (newTitle && newTitle.trim()) {
+    setEditingChatId(chatId);
+  };
+
+  const handleDeleteChat = async (chatId: string) => {
+    setDeletingChatId(chatId);
+  };
+
+  const handleSaveTitle = async (newTitle: string) => {
+    if (!editingChatId) return;
+    
+    if (newTitle.trim()) {
       try {
-        const updatedChat = await chatService.updateChatTitle(chatId, newTitle);
+        const updatedChat = await chatService.updateChatTitle(editingChatId, newTitle);
         setChats(chats.map(chat => 
-          chat.id === chatId ? updatedChat : chat
+          chat.id === editingChatId ? updatedChat : chat
         ));
       } catch (error) {
         toast.error("Failed to update title");
         console.error(error);
       }
     }
+    setEditingChatId(null);
   };
 
-  const handleDeleteChat = async (chatId: string) => {
-    if (confirm("Are you sure you want to delete this chat?")) {
-      try {
-        await chatService.deleteChat(chatId);
-        setChats(chats.filter(chat => chat.id !== chatId));
-        if (currentChatId === chatId) {
+  const handleConfirmDelete = async () => {
+    if (!deletingChatId) return;
+    
+    try {
+      if (deletingChatId === "ALL") {
+        await chatService.clearAllChats();
+        setChats([]);
+        setCurrentChatId(null);
+        toast.success("All chats cleared");
+      } else {
+        await chatService.deleteChat(deletingChatId);
+        setChats(chats.filter(chat => chat.id !== deletingChatId));
+        if (currentChatId === deletingChatId) {
           setCurrentChatId(null);
         }
         toast.success("Chat deleted");
-      } catch (error) {
-        toast.error("Failed to delete chat");
-        console.error(error);
       }
+    } catch (error) {
+      toast.error(deletingChatId === "ALL" ? "Failed to clear chats" : "Failed to delete chat");
+      console.error(error);
     }
+    setDeletingChatId(null);
   };
 
   const filteredChats = chats.filter(chat =>
     chat.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const editingChat = editingChatId ? chats.find(chat => chat.id === editingChatId) : null;
+
   return (
     <div className="flex h-screen bg-gradient-to-br from-romantic-peach/50 via-romantic-pink/50 to-romantic-purple/50">
+      {editingChat && (
+        <EditTitleModal
+          isOpen={!!editingChatId}
+          initialTitle={editingChat.title}
+          onSave={handleSaveTitle}
+          onCancel={() => setEditingChatId(null)}
+        />
+      )}
+      <DeleteConfirmationModal
+        isOpen={!!deletingChatId}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeletingChatId(null)}
+      />
       {/* Chat History Panel */}
       <div className="w-64 border-r bg-white/50 backdrop-blur-sm">
         <div className="p-4 space-y-4">
@@ -172,6 +219,15 @@ const ChatInterface = () => {
               className="pl-10"
             />
           </div>
+          
+          <Button 
+            variant="outline"
+            className="w-full bg-white hover:bg-gray-50 text-red-500 hover:text-red-600 border-red-200"
+            onClick={() => setDeletingChatId("ALL")}
+          >
+            <Trash size={16} className="mr-2" />
+            Clear All Chats
+          </Button>
         </div>
 
         <ScrollArea className="h-[calc(100vh-160px)] px-4">

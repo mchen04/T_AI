@@ -1,3 +1,12 @@
+export interface Message {
+  id: string;
+  text: string;
+  isUser: boolean;
+  timestamp: number;
+  isStreaming?: boolean;
+  isError?: boolean;
+}
+
 export interface Chat {
   id: string;
   title: string;
@@ -6,12 +15,9 @@ export interface Chat {
   createdAt: number;
 }
 
-export interface Message {
-  id: string;
-  text: string;
-  isUser: boolean;
-  isStreaming?: boolean;
-  isError?: boolean;
-  timestamp?: number;
-  error?: boolean;
+export interface ChatApiConfig {
+  apiUrl: string;
+  apiKey: string;
+  model?: string;
+  temperature?: number;
 }

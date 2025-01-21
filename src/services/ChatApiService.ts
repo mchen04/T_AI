@@ -1,28 +1,42 @@
-export class ChatApiService {
-  private apiUrl: string;
-  private apiKey: string;
+import { IChatApiService } from "./interfaces/IChatApiService";
+
+export interface ChatApiConfig {
+  apiUrl: string;
+  apiKey: string;
+  model?: string;
+  temperature?: number;
+}
+
+export class ChatApiService implements IChatApiService {
+  private config: ChatApiConfig;
   private abortController: AbortController | null = null;
 
-  constructor(apiUrl: string, apiKey: string) {
-    this.apiUrl = apiUrl;
-    this.apiKey = apiKey;
+  constructor(config: ChatApiConfig) {
+    this.config = {
+      model: "deepseek-chat",
+      temperature: 0.7,
+      ...config
+    };
   }
 
-  async *sendMessageStream(chatId: string, messages: Array<{role: string, content: string}>): AsyncGenerator<string> {
+  async *sendMessageStream(
+    chatId: string,
+    messages: Array<{role: string, content: string}>
+  ): AsyncGenerator<string> {
     this.abortController = new AbortController();
     
     try {
-      const response = await fetch(this.apiUrl, {
+      const response = await fetch(this.config.apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${this.apiKey}`,
+          "Authorization": `Bearer ${this.config.apiKey}`,
           "Accept": "text/event-stream"
         },
         body: JSON.stringify({
-          model: "deepseek-chat",
+          model: this.config.model,
           messages: messages,
-          temperature: 0.7,
+          temperature: this.config.temperature,
           stream: true
         }),
         signal: this.abortController.signal

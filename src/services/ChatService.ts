@@ -1,12 +1,16 @@
 import { Chat } from "@/types";
-import { ChatStorageService } from "./ChatStorageService";
-import { ChatApiService } from "./ChatApiService";
+import { IChatService } from "./interfaces/IChatService";
+import { IChatStorageService } from "./interfaces/IChatStorageService";
+import { IChatApiService } from "./interfaces/IChatApiService";
 
-export class ChatService {
-  private storageService: ChatStorageService;
-  private apiService: ChatApiService;
+export class ChatService implements IChatService {
+  private storageService: IChatStorageService;
+  private apiService: IChatApiService;
 
-  constructor(storageService: ChatStorageService, apiService: ChatApiService) {
+  constructor(
+    storageService: IChatStorageService,
+    apiService: IChatApiService
+  ) {
     this.storageService = storageService;
     this.apiService = apiService;
   }
@@ -42,11 +46,20 @@ export class ChatService {
     const updatedChat = {
       ...chat,
       messages: [...chat.messages, { 
+        id: crypto.randomUUID(),
         text: message, 
         isUser: true,
         timestamp: Date.now()
       }]
     };
+
+    // If this is the first message, update chat title
+    if (chat.messages.length === 0) {
+      updatedChat.title = message.length > 50 
+        ? `${message.slice(0, 47)}...`
+        : message;
+    }
+
     await this.storageService.updateChat(updatedChat);
     yield updatedChat;
 
@@ -59,57 +72,14 @@ export class ChatService {
     ];
 
     try {
-      // Add empty AI response placeholder
-      const aiResponseId = crypto.randomUUID();
-      const streamingChat = {
-        ...updatedChat,
-        messages: [
-          ...updatedChat.messages,
-          {
-            id: aiResponseId,
-            text: "",
-            isUser: false,
-            timestamp: Date.now(),
-            isStreaming: true
-          }
-        ]
-      };
-      await this.storageService.updateChat(streamingChat);
-      yield streamingChat;
-
-      // Process streaming response
-      let fullResponse = "";
-      for await (const chunk of this.apiService.sendMessageStream(chatId, messages)) {
-        fullResponse += chunk;
-        const updatedStreamingChat = {
-          ...streamingChat,
-          messages: streamingChat.messages.map(msg => 
-            msg.id === aiResponseId
-              ? { ...msg, text: fullResponse }
-              : msg
-          )
-        };
-        await this.storageService.updateChat(updatedStreamingChat);
-        yield updatedStreamingChat;
-      }
-
-      // Finalize response
-      const finalChat = {
-        ...streamingChat,
-        messages: streamingChat.messages.map(msg => 
-          msg.id === aiResponseId
-            ? { ...msg, text: fullResponse, isStreaming: false }
-            : msg
-        )
-      };
-      await this.storageService.updateChat(finalChat);
-      yield finalChat;
+      yield* this.processAiResponse(chatId, updatedChat, messages);
     } catch (error) {
       const errorChat = {
         ...updatedChat,
         messages: [
           ...updatedChat.messages,
           { 
+            id: crypto.randomUUID(),
             text: "Sorry, I'm having trouble connecting to the AI service. Please try again later.", 
             isUser: false,
             timestamp: Date.now(),
@@ -121,6 +91,58 @@ export class ChatService {
       yield errorChat;
       throw error;
     }
+  }
+
+  private async *processAiResponse(
+    chatId: string,
+    chat: Chat,
+    messages: Array<{role: string, content: string}>
+  ): AsyncGenerator<Chat> {
+    // Add empty AI response placeholder
+    const aiResponseId = crypto.randomUUID();
+    const streamingChat = {
+      ...chat,
+      messages: [
+        ...chat.messages,
+        {
+          id: aiResponseId,
+          text: "",
+          isUser: false,
+          timestamp: Date.now(),
+          isStreaming: true
+        }
+      ]
+    };
+    await this.storageService.updateChat(streamingChat);
+    yield streamingChat;
+
+    // Process streaming response
+    let fullResponse = "";
+    for await (const chunk of this.apiService.sendMessageStream(chatId, messages)) {
+      fullResponse += chunk;
+      const updatedStreamingChat = {
+        ...streamingChat,
+        messages: streamingChat.messages.map(msg => 
+          msg.id === aiResponseId
+            ? { ...msg, text: fullResponse }
+            : msg
+        )
+      };
+      await this.storageService.updateChat(updatedStreamingChat);
+      yield updatedStreamingChat;
+    }
+
+    // Finalize response
+    const finalChat = {
+      ...streamingChat,
+      messages: streamingChat.messages.map(msg => 
+        msg.id === aiResponseId
+          ? { ...msg, text: fullResponse, isStreaming: false }
+          : msg
+      )
+    };
+    await this.storageService.updateChat(finalChat);
+    yield finalChat;
   }
 
   async togglePinChat(chatId: string): Promise<Chat> {
@@ -153,5 +175,9 @@ export class ChatService {
 
   async deleteChat(chatId: string): Promise<void> {
     await this.storageService.deleteChat(chatId);
+  }
+
+  async clearAllChats(): Promise<void> {
+    await this.storageService.clearAllChats();
   }
 }
