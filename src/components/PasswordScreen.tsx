@@ -48,6 +48,7 @@ const PasswordScreen = ({ onSuccess }: PasswordScreenProps) => {
       toast({
         title: "Password accepted!",
         description: "Let's get started 💕",
+        duration: 1500,
       });
       onSuccess();
     } else {

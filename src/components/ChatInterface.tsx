@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Pin, Search, Settings, Plus } from "lucide-react";
@@ -6,6 +6,10 @@ import { toast } from 'sonner';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 type Chat = {
   id: string;
@@ -252,7 +256,7 @@ const ChatInterface = () => {
             >
               <div
                 className={cn(
-                  "max-w-[80%] p-4 rounded-2xl shadow-sm transition-all",
+                  "max-w-[80%] p-4 rounded-2xl shadow-sm transition-all text-sm",
                   msg.isUser
                     ? "bg-white text-gray-800"
                     : "bg-gradient-to-r from-pink-400 to-purple-400 text-white"
