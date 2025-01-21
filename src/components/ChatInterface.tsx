@@ -192,7 +192,7 @@ const ChatInterface = () => {
   const editingChat = editingChatId ? chats.find(chat => chat.id === editingChatId) : null;
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-romantic-peach/50 via-romantic-pink/50 to-romantic-purple/50">
+    <div className="flex h-screen max-h-screen bg-gradient-to-br from-romantic-peach/50 via-romantic-pink/50 to-romantic-purple/50 overflow-hidden [&::-webkit-scrollbar]:hidden">
       {editingChat && (
         <EditTitleModal
           isOpen={!!editingChatId}
@@ -207,8 +207,8 @@ const ChatInterface = () => {
         onCancel={() => setDeletingChatId(null)}
       />
       {/* Chat History Panel */}
-      <div className="w-64 border-r bg-white/50 backdrop-blur-sm">
-        <div className="p-4 space-y-4">
+      <div className="w-64 border-r bg-white/50 backdrop-blur-sm flex flex-col">
+        <div className="p-4 space-y-4 flex-none">
           <div className="flex items-center gap-2">
             <Button 
               onClick={handleCreateChat}
@@ -239,7 +239,7 @@ const ChatInterface = () => {
           </Button>
         </div>
 
-        <ScrollArea className="h-[calc(100vh-160px)] px-4">
+        <ScrollArea className="flex-1 px-4 overflow-y-auto [&::-webkit-scrollbar]:block">
           {/* Pinned Chats */}
           {filteredChats.filter(chat => chat.pinned).length > 0 && (
             <div className="space-y-2">
@@ -354,16 +354,16 @@ const ChatInterface = () => {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-h-0">
         {/* Header */}
-        <div className="p-4 border-b bg-white/50 backdrop-blur-sm">
+        <div className="p-4 border-b bg-white/50 backdrop-blur-sm flex-none">
           <h2 className="text-xl font-semibold">
             {currentChat?.title || "New Chat"}
           </h2>
         </div>
 
         {/* Messages */}
-        <ScrollArea className="flex-1 p-4 space-y-4">
+        <ScrollArea className="flex-1 p-4 space-y-4 overflow-y-auto [&::-webkit-scrollbar]:block">
           {currentChat?.messages.map((msg, index) => {
             const isStreaming = msg.isStreaming && !msg.isUser;
             const isError = msg.isError && !msg.isUser;
@@ -402,7 +402,7 @@ const ChatInterface = () => {
         </ScrollArea>
 
         {/* Input Area */}
-        <form onSubmit={handleSubmit} className="p-4 bg-white/50 backdrop-blur-sm border-t">
+        <form onSubmit={handleSubmit} className="p-4 bg-white/50 backdrop-blur-sm border-t flex-none">
           <div className="flex gap-2">
             <Input
               value={message}
