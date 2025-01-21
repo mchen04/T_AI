@@ -119,7 +119,7 @@ const PasswordScreen = ({ onSuccess }: PasswordScreenProps) => {
           <div className="flex flex-col items-center space-y-2">
             <h1 className="text-3xl font-semibold text-gray-800 mt-4">Hi Tianna!</h1>
           </div>
-          <p className="text-gray-600">Welcome to your special assistant 💕</p>
+            <p className="text-gray-600">Welcome to your personalized GPT clone! 💡 Please use it responsibly, as it operates using my resources. Thank you!</p>
           <p className="text-gray-600 text-sm">Please type the password to continue</p>
         </div>
         
