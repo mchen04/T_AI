@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Eye, EyeOff, Heart, Sparkle, Stars } from "lucide-react";
+import { Eye, EyeOff, Heart, Sparkle, Stars, Lock, Unlock, Key, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -114,9 +114,11 @@ const PasswordScreen = ({ onSuccess }: PasswordScreenProps) => {
       </div>
 
       {/* Main content */}
-      <div className="w-full max-w-md p-8 space-y-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl relative z-10">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl relative z-10 border border-white/20">
         <div className="text-center space-y-2 animate-fade-in">
-          <h1 className="text-3xl font-semibold text-gray-800">Hi Tianna!</h1>
+          <div className="flex flex-col items-center space-y-2">
+            <h1 className="text-3xl font-semibold text-gray-800 mt-4">Hi Tianna!</h1>
+          </div>
           <p className="text-gray-600">Welcome to your special assistant 💕</p>
           <p className="text-gray-600 text-sm">Please type the password to continue</p>
         </div>
@@ -137,11 +139,6 @@ const PasswordScreen = ({ onSuccess }: PasswordScreenProps) => {
               placeholder="••••••••"
               aria-label="Password input"
             />
-            <div className="absolute inset-0 pointer-events-none">
-              {isFocused && (
-                <div className="absolute inset-0 bg-gradient-to-r from-pink-100/20 to-purple-100/20 animate-ripple rounded-md" />
-              )}
-            </div>
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
@@ -152,29 +149,22 @@ const PasswordScreen = ({ onSuccess }: PasswordScreenProps) => {
             </button>
           </div>
           
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className={cn(
-              "w-full bg-gradient-to-r from-pink-400 to-purple-400 hover:from-pink-500 hover:to-purple-500 text-white",
-              "transform transition-transform duration-200 hover:scale-[1.02] active:scale-95",
-              "relative overflow-hidden group"
-            )}
-          >
-            {/* Sparkle trail effect */}
-            <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute -left-10 top-1/2 w-20 h-20 bg-white/20 rounded-full animate-sparkle-trail group-hover:animate-sparkle-trail-active" />
+            <div className="space-y-2">
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-gradient-to-r from-pink-400 to-purple-400 hover:from-pink-500 hover:to-purple-500 text-white transition-colors duration-200"
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Submitting...</span>
+                  </div>
+                ) : (
+                  "Enter"
+                )}
+              </Button>
             </div>
-
-            {isSubmitting ? (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Submitting...</span>
-              </div>
-            ) : (
-              "Enter"
-            )}
-          </Button>
         </form>
       </div>
 
