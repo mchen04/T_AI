@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Pin, Search, Plus, Edit, Trash } from "lucide-react";
@@ -21,6 +21,7 @@ const chatService = new ChatService(chatStorageService, chatApiService);
 
 const ChatInterface = () => {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [message, setMessage] = useState("");
   const [chats, setChats] = useState<Chat[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -50,12 +51,19 @@ const ChatInterface = () => {
 
   const currentChat = chats.find(chat => chat.id === currentChatId);
 
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [currentChat?.messages]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim()) return;
-
     try {
       setIsLoading(true);
+      const messageToSend = message;
       
       let chatId = currentChatId;
       if (!chatId) {
@@ -107,6 +115,7 @@ const ChatInterface = () => {
       const newChat = await chatService.createChat();
       setChats([newChat, ...chats]);
       setCurrentChatId(newChat.id);
+      setMessage("");
       toast.success("New chat created!", { duration: 1500 });
     } catch (error) {
       toast.error("Failed to create new chat");
@@ -294,7 +303,10 @@ const ChatInterface = () => {
               .map(chat => (
                 <button
                   key={chat.id}
-                  onClick={() => setCurrentChatId(chat.id)}
+                  onClick={() => {
+                    setCurrentChatId(chat.id);
+                    setMessage("");
+                  }}
                   className={cn(
                     "w-full text-left p-2 rounded-lg hover:bg-gray-50 transition-colors",
                     currentChatId === chat.id && "bg-gradient-to-r from-pink-50 to-purple-50 border-l-4 border-purple-400"
@@ -386,6 +398,7 @@ const ChatInterface = () => {
               </div>
             );
           })}
+          <div ref={messagesEndRef} />
         </ScrollArea>
 
         {/* Input Area */}
