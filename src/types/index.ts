@@ -7,8 +7,11 @@ export interface Chat {
 }
 
 export interface Message {
+  id: string;
   text: string;
   isUser: boolean;
+  isStreaming?: boolean;
+  isError?: boolean;
   timestamp?: number;
   error?: boolean;
 }

@@ -62,10 +62,23 @@ const ChatInterface = () => {
         return;
       }
 
-      const updatedChat = await chatService.sendMessage(currentChatId, message);
-      setChats(chats.map(chat => 
-        chat.id === currentChatId ? updatedChat : chat
-      ));
+      // Start streaming response
+      const stream = chatService.sendMessage(currentChatId, message);
+      let finalChat: Chat | null = null;
+      
+      for await (const updatedChat of stream) {
+        finalChat = updatedChat;
+        setChats(chats => 
+          chats.map(chat => 
+            chat.id === currentChatId ? updatedChat : chat
+          )
+        );
+      }
+
+      if (finalChat) {
+        // Update local storage with latest chat
+        localStorage.setItem("last-chat-id", finalChat.id);
+      }
       setMessage("");
     } catch (error) {
       toast.error("Failed to send message");
@@ -283,27 +296,40 @@ const ChatInterface = () => {
 
         {/* Messages */}
         <ScrollArea className="flex-1 p-4 space-y-4">
-          {currentChat?.messages.map((msg, index) => (
-            <div
-              key={index}
-              className={cn(
-                "flex",
-                msg.isUser ? "justify-end" : "justify-start",
-                "animate-fade-in"
-              )}
-            >
+          {currentChat?.messages.map((msg, index) => {
+            const isStreaming = msg.isStreaming && !msg.isUser;
+            const isError = msg.isError && !msg.isUser;
+            
+            return (
               <div
+                key={msg.id || index}
                 className={cn(
-                  "max-w-[80%] p-4 rounded-2xl shadow-sm transition-all text-sm",
-                  msg.isUser
-                    ? "bg-white text-gray-800"
-                    : "bg-gradient-to-r from-pink-400 to-purple-400 text-white"
+                  "flex",
+                  msg.isUser ? "justify-end" : "justify-start",
+                  "animate-fade-in"
                 )}
               >
-                {msg.text}
+                <div
+                  className={cn(
+                    "max-w-[80%] p-4 rounded-2xl shadow-sm transition-all text-sm",
+                    msg.isUser
+                      ? "bg-white text-gray-800"
+                      : isError
+                        ? "bg-red-100 text-red-800"
+                        : "bg-gradient-to-r from-pink-400 to-purple-400 text-white",
+                    isStreaming && "relative overflow-hidden"
+                  )}
+                >
+                  {msg.text}
+                  {isStreaming && (
+                    <div className="absolute inset-x-0 bottom-0 h-1 bg-white/20">
+                      <div className="h-full w-1/2 bg-white/50 animate-streaming" />
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </ScrollArea>
 
         {/* Input Area */}
