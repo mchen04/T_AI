@@ -21,15 +21,15 @@ const ChatInterface = () => {
     setIsLoading(true);
 
     try {
-      if (!import.meta.env.VITE_API_KEY) {
-        throw new Error("API key not configured");
+      if (!import.meta.env.VITE_DEEPSEEK_API_KEY) {
+        throw new Error("Deepseek API key not configured");
       }
 
       const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${import.meta.env.VITE_API_KEY}`
+          "Authorization": `Bearer ${import.meta.env.VITE_DEEPSEEK_API_KEY}`
         },
         body: JSON.stringify({
           model: "deepseek-chat",
